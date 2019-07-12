@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// track whether workers executed in parallel.
+// Parallelism -> track whether workers executed in parallel.
 type Parallelism struct {
 	mu  sync.Mutex
 	now int32
@@ -42,8 +42,8 @@ func (wk *Worker) DoTask(arg *DoTaskArgs, _ *struct{}) error {
 		wk.name, arg.Phase, arg.TaskNumber, arg.File, arg.NumOtherPhase)
 
 	wk.Lock()
-	wk.nTasks += 1
-	wk.concurrent += 1
+	wk.nTasks++
+	wk.concurrent++
 	nc := wk.concurrent
 	wk.Unlock()
 
@@ -56,7 +56,7 @@ func (wk *Worker) DoTask(arg *DoTaskArgs, _ *struct{}) error {
 	pause := false
 	if wk.parallelism != nil {
 		wk.parallelism.mu.Lock()
-		wk.parallelism.now += 1
+		wk.parallelism.now++
 		if wk.parallelism.now > wk.parallelism.max {
 			wk.parallelism.max = wk.parallelism.now
 		}
@@ -80,12 +80,12 @@ func (wk *Worker) DoTask(arg *DoTaskArgs, _ *struct{}) error {
 	}
 
 	wk.Lock()
-	wk.concurrent -= 1
+	wk.concurrent--
 	wk.Unlock()
 
 	if wk.parallelism != nil {
 		wk.parallelism.mu.Lock()
-		wk.parallelism.now -= 1
+		wk.parallelism.now--
 		wk.parallelism.mu.Unlock()
 	}
 
