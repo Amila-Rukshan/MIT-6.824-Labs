@@ -36,11 +36,26 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	var wg sync.WaitGroup
 
 	for i := 0; i < ntasks; i++ {
-		workerRPC := <-registerChan
-		// Increment the WaitGroup counter.
 		wg.Add(1)
-		// Launch a goroutine perform a task
-		go call(workerRPC, "Worker.DoTask", DoTaskArgs{jobName, mapFiles[i], phase, i, nOther}, nil)
+
+		go func(taskNumber int, n_other int, phase jobPhase) {
+
+			taskArgs := DoTaskArgs{JobName: jobName, File: mapFiles[taskNumber], Phase: phase, TaskNumber: taskNumber, NumOtherPhase: n_other}
+
+			success := false
+
+			for !success {
+				workerRPC := <-registerChan
+				success = call(workerRPC, "Worker.DoTask", taskArgs, nil)
+
+				if success {
+					wg.Done()
+					registerChan <- workerRPC
+				}
+
+			}
+
+		}(i, nOther, phase)
 	}
 
 	wg.Wait()
